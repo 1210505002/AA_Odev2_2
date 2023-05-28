@@ -5,9 +5,12 @@ const pixelmatch = require("pixelmatch");
 
 const compareImagesInFolder = async (folderPath) => {
   try {
-    console.log("> Started comparing images in folder:", folderPath);
+    console.log("> Klasördeki resimler karşılaştırılıyor:", folderPath);
 
+    // Klasördeki dosyaları okuyun
     const files = fs.readdirSync(folderPath);
+    
+    // Resim dosyalarını filtreleyin (sadece .png, .jpg veya .jpeg uzantılı dosyaları kabul edin)
     const images = files.filter((file) => {
       const extension = path.extname(file).toLowerCase();
       return (
@@ -16,7 +19,7 @@ const compareImagesInFolder = async (folderPath) => {
     });
 
     if (images.length < 2) {
-      console.log("Not enough images in the folder to compare.");
+      console.log("Karşılaştırmak için yeterli resim bulunamadı.");
       return;
     }
 
@@ -25,24 +28,30 @@ const compareImagesInFolder = async (folderPath) => {
 
     const results = [];
 
+    // Tüm resimler için karşılaştırma yapın
     for (let i = 0; i < images.length; i++) {
       let maxCompatibility = 0;
       let maxCompatibilityImage1 = "";
       let maxCompatibilityImage2 = "";
       let leastDifference = 0;
 
+      // Diğer resimlerle karşılaştırma yapın
       for (let j = 0; j < images.length; j++) {
         if (i != j) {
           const image1Path = path.join(folderPath, images[i]);
           const image2Path = path.join(folderPath, images[j]);
 
+          // İlk resmi okuyun ve PNG formatına dönüştürün
           const img1 = PNG.sync.read(fs.readFileSync(image1Path));
+          
+          // İkinci resmi okuyun ve PNG formatına dönüştürün
           const img2 = PNG.sync.read(fs.readFileSync(image2Path));
 
-          // Yeniden boyutlandırma işlemi
+          // Resimleri yeniden boyutlandırma
           const resizedImg1 = resizeImage(img1, targetWidth, targetHeight);
           const resizedImg2 = resizeImage(img2, targetWidth, targetHeight);
 
+          // Yeniden boyutlandırılmış resimler arasındaki farkı hesaplayın
           const { width, height } = resizedImg1;
           const diff = new PNG({ width, height });
 
@@ -57,7 +66,10 @@ const compareImagesInFolder = async (folderPath) => {
             }
           );
 
+          // Uyumluluk yüzdesini hesaplayın
           const compatibility = 100 - (difference * 100) / (width * height);
+          
+          // En yüksek uyumluluğa sahip resimleri ve farkı kaydedin
           if (compatibility > maxCompatibility) {
             maxCompatibility = compatibility;
             maxCompatibilityImage1 = images[i];
@@ -69,6 +81,7 @@ const compareImagesInFolder = async (folderPath) => {
         }
       }
 
+      // Sonuçları sonuç dizisine ekleyin
       results.push({
         image1: maxCompatibilityImage1,
         image2: maxCompatibilityImage2,
@@ -77,20 +90,20 @@ const compareImagesInFolder = async (folderPath) => {
       });
     }
 
-    // Benzerlik oranına göre sıralama
+    // Uyumluluğa göre sonuçları sıralayın
     results.sort((a, b) => b.compatibility - a.compatibility);
 
-    // Sonuçları konsola yazdırma
+    // Sonuçları konsola yazdırın
     results.forEach((result) => {
       console.log(result);
     });
   } catch (error) {
-    console.log("Error comparing images:", error);
+    console.log("Resimler karşılaştırılırken hata oluştu:", error);
     throw error;
   }
 };
 
-// Yardımcı işlev: Görüntüyü yeniden boyutlandırır
+// Yardımcı fonksiyon: Resmi yeniden boyutlandırır
 const resizeImage = (image, targetWidth, targetHeight) => {
   const resizedImage = new PNG({ width: targetWidth, height: targetHeight });
 
@@ -101,6 +114,7 @@ const resizeImage = (image, targetWidth, targetHeight) => {
       const sourceY = Math.floor((y / targetHeight) * image.height);
       const sourceIdx = (image.width * sourceY + sourceX) << 2;
 
+      // Yeniden boyutlandırılmış resmin verilerini atayın
       resizedImage.data[idx] = image.data[sourceIdx];
       resizedImage.data[idx + 1] = image.data[sourceIdx + 1];
       resizedImage.data[idx + 2] = image.data[sourceIdx + 2];
